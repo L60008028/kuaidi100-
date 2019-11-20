@@ -1,0 +1,74 @@
+
+/**
+ * 快递100
+ */
+public class Kuaidi100Service {
+    public static void main(String[] args) throws Exception {
+        String postid="71730705826178";//快递单号
+        //1从主页获取cookies
+        String host="https://www.kuaidi100.com";
+        HttpGet get = new HttpGet(host);
+        get.setHeader("Connection","keep-alive");
+        DefaultHttpClient client = new DefaultHttpClient();
+        HttpResponse response = client.execute(get);
+        String result = EntityUtils.toString(response.getEntity(),"utf-8");
+        CookieStore store = client.getCookieStore();
+        List<Cookie> cookieList = store.getCookies();
+        String csrftoken="";
+        String WWWID="";
+        for (Cookie cookie : cookieList){
+            String name =cookie.getName();
+            String value = cookie.getValue();
+            if(name.equals("csrftoken")){
+                csrftoken=value;
+            }
+            if(name.equals("WWWID")){
+                WWWID= value;
+            }
+            System.out.println("getcookies，cookie name = "+name+", cookie value = "+value);
+        }
+
+
+        String cookieValue="csrftoken="+csrftoken+";WWWID="+WWWID+";";
+
+        //2根据快递单号查询的快递公司的编码， 一律用小写字母
+        Map<String, String> headers = new HashMap<>();
+        headers.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0");
+        headers.put("Referer","https://www.kuaidi100.com/");
+        headers.put("Connection","keep-alive");
+        headers.put("Content-Type","application/json;charset=UTF-8");
+        headers.put("Cookie",cookieValue);
+
+        Map<String, String> querys = new HashMap<>();
+        querys.put("resultv2","1");
+        querys.put("text",postid);
+        HttpResponse response1 = HttpUtils.doGet(host, "/autonumber/autoComNum", "GET", headers, querys);
+        String re1 = EntityUtils.toString(response1.getEntity());
+        System.out.println("==根据快递单号查找快递公司==");
+        System.out.println(re1);
+        JsonParser jsonParser = new JsonParser();
+        JsonObject obj = (JsonObject) jsonParser.parse(re1);
+        JsonArray auto = obj.getAsJsonArray("auto");
+        String comCode="";
+        if(auto!=null && auto.size()>0){
+            comCode= auto.get(0).getAsJsonObject().get("comCode").getAsString();
+        }
+        System.out.println("====comCode="+comCode);
+
+
+        //3查快递信息
+        String temp= Math.random()+"";
+        Map<String, String> querys1 = new HashMap<>();
+        querys1.put("type",comCode);
+        querys1.put("postid",postid);
+        querys1.put("temp",temp);
+        querys1.put("phone","");
+        HttpResponse response2 = HttpUtils.doGet(host, "/query", "GET", headers, querys1);
+        String re2 = EntityUtils.toString(response2.getEntity());
+        System.out.println("==查快递信息==");
+        System.out.println(re2);
+
+    }
+
+
+}
